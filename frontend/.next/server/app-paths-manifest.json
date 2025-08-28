@@ -1,5 +1,15 @@
 {
-  "/(staff)/jobs/[id]/page": "app/(staff)/jobs/[id]/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/(client)/client/page": "app/(client)/client/page.js",
+  "/(public)/login/page": "app/(public)/login/page.js",
   "/(public)/page": "app/(public)/page.js",
-  "/(staff)/dashboard/page": "app/(staff)/dashboard/page.js"
+  "/(client)/client/jobs/[id]/page": "app/(client)/client/jobs/[id]/page.js",
+  "/(public)/signup/page": "app/(public)/signup/page.js",
+  "/(client)/client/jobs/new/page": "app/(client)/client/jobs/new/page.js",
+  "/(staff)/emails/page": "app/(staff)/emails/page.js",
+  "/(staff)/account/page": "app/(staff)/account/page.js",
+  "/(staff)/dashboard/page": "app/(staff)/dashboard/page.js",
+  "/(staff)/chat/page": "app/(staff)/chat/page.js",
+  "/(staff)/jobs/[id]/page": "app/(staff)/jobs/[id]/page.js",
+  "/(staff)/jobs/page": "app/(staff)/jobs/page.js"
 }
