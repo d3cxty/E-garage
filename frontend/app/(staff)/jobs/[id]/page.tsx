@@ -15,22 +15,8 @@ export default function JobDetail(){
   const [savingStatus,setSavingStatus]=useState(false);
   const [savingPayment,setSavingPayment]=useState(false);
 
-  // Read role once (no new imports)
-  const [role, setRole] = useState<string>('client');
-  const isManager = role === 'staff' || role === 'admin';
-
   // Lightbox
   const [lightbox, setLightbox] = useState<{open:boolean; index:number}>({open:false, index:0});
-
-  useEffect(()=>{
-    try {
-      const u = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
-      if (u) {
-        const parsed = JSON.parse(u);
-        if (parsed?.role) setRole(parsed.role);
-      }
-    } catch {}
-  },[]);
 
   async function load(signal?: AbortSignal){
     if(!jobId){ setError('Missing job id'); setLoading(false); return; }
@@ -38,12 +24,6 @@ export default function JobDetail(){
       setLoading(true); setError(undefined);
       const { data } = await api.get('/clients/'+jobId, { signal: signal as any });
       setJob(data);
-      // Set document title for context
-      if (typeof document !== 'undefined') {
-        const nm = (data?.names || 'Client').toString();
-        const pn = data?.plateNumber ? ` • ${data.plateNumber}` : '';
-        document.title = `Job – ${nm}${pn} • E-Garage`;
-      }
     }catch(err:any){
       if((signal as any)?.aborted) return;
       setError(err?.response?.data?.message || 'Failed to load job');
@@ -58,23 +38,10 @@ export default function JobDetail(){
     return ()=> ctrl.abort();
   },[jobId]);
 
-  // Keyboard control for lightbox
-  useEffect(()=>{
-    if(!lightbox.open) return;
-    const onKey = (e: KeyboardEvent)=>{
-      if(e.key === 'Escape') { e.preventDefault(); closeLightbox(); }
-      if(e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
-      if(e.key === 'ArrowRight') { e.preventDefault(); next(); }
-    };
-    window.addEventListener('keydown', onKey);
-    return ()=> window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lightbox.open]);
-
   const refresh = ()=> load();
 
   async function setStatus(next:string){
-    if(!job || savingStatus || !isManager) return;
+    if(!job || savingStatus) return;
     const prev = job.status;
     setSavingStatus(true);
     setJob({ ...job, status: next });
@@ -87,7 +54,7 @@ export default function JobDetail(){
   }
 
   async function setPayment(next:string){
-    if(!job || savingPayment || !isManager) return;
+    if(!job || savingPayment) return;
     const prev = job.payment;
     setSavingPayment(true);
     setJob({ ...job, payment: next });
@@ -141,38 +108,19 @@ export default function JobDetail(){
   const prev = ()=> setLightbox(s=> ({open:true, index: (s.index-1+photos.length)%photos.length }));
   const next = ()=> setLightbox(s=> ({open:true, index: (s.index+1)%photos.length }));
 
-  const vehicleStr = [job.carMake, job.carType].filter(Boolean).join(' • ') || 'Vehicle';
-  const plate = job.plateNumber || '—';
-
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <div className="space-y-4">
         <div className="card">
           {/* Header */}
           <div className="mb-2 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-lg font-semibold truncate" title={job.names || 'Unknown Client'}>
-                {job.names || 'Unknown Client'}
-              </div>
-              <div className="text-sm text-slate-300">
-                <span className="truncate">{vehicleStr}</span>
-                {" "}•{" "}
-                <span className="text-slate-400" title="Plate number">{plate}</span>
-                {photos?.length ? <span className="ml-2 text-slate-500">• {photos.length} photo{photos.length>1?'s':''}</span> : null}
-              </div>
+            <div>
+              <div className="text-lg font-semibold">{job.names || 'Unknown Client'}</div>
+              <div className="text-sm text-slate-300">{[job.carMake, job.carType].filter(Boolean).join(' • ') || 'Vehicle'} • <span className="text-slate-400">{job.plateNumber || '—'}</span></div>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={refresh} className="rounded-md border border-white/10 bg-slate-900 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800">Refresh</button>
-              {/* Export stays visible; server enforces permissions. Disable if missing base/id */}
-              <a
-                className={`rounded-md px-3 py-1.5 text-xs ${base && job._id ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-700/60 cursor-not-allowed'}`}
-                href={base && job._id ? `${base}/clients/${job._id}/pdf` : '#'}
-                target="_blank"
-                rel="noreferrer noopener"
-                onClick={(e)=>{ if(!base || !job._id) e.preventDefault(); }}
-              >
-                Export PDF
-              </a>
+              <a className={`rounded-md px-3 py-1.5 text-xs ${base && job._id ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-700/60 cursor-not-allowed'}`} href={base && job._id ? `${base}/clients/${job._id}/pdf` : '#'} target="_blank" rel="noreferrer noopener">Export PDF</a>
             </div>
           </div>
 
@@ -180,38 +128,21 @@ export default function JobDetail(){
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge value={job.status}/>
             <PaymentBadge value={job.payment}/>
-
-            {/* Manager-only quick actions */}
-            {isManager && (
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                {['pending','repairing','completed'].map((s)=> (
-                  <button
-                    key={s}
-                    onClick={()=>setStatus(s)}
-                    disabled={savingStatus || job.status===s}
-                    className={`rounded px-2 py-1 text-xs transition ${job.status===s ? 'bg-brand-600' : 'bg-slate-800 hover:bg-slate-700'} ${savingStatus ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    aria-pressed={job.status===s}
-                    aria-label={`Set status to ${s}`}
-                    title={`Set status: ${s}`}
-                  >
-                    {s.charAt(0).toUpperCase()+s.slice(1)}
-                  </button>
-                ))}
-                <button
-                  onClick={()=>setPayment(job.payment==='paid'?'unpaid':'paid')}
-                  disabled={savingPayment}
-                  className={`rounded px-2 py-1 text-xs transition ${job.payment==='paid' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-brand-600 hover:bg-brand-700'} ${savingPayment ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  title={job.payment==='paid' ? 'Mark Unpaid' : 'Mark Paid'}
-                >
-                  {savingPayment ? 'Saving…' : (job.payment==='paid' ? 'Mark Unpaid' : 'Mark Paid')}
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {['pending','repairing','completed'].map((s)=> (
+                <button key={s} onClick={()=>setStatus(s)} disabled={savingStatus || job.status===s} className={`rounded px-2 py-1 text-xs transition ${job.status===s ? 'bg-brand-600' : 'bg-slate-800 hover:bg-slate-700'} ${savingStatus ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                  {s.charAt(0).toUpperCase()+s.slice(1)}
                 </button>
-              </div>
-            )}
+              ))}
+              <button onClick={()=>setPayment(job.payment==='paid'?'unpaid':'paid')} disabled={savingPayment} className={`rounded px-2 py-1 text-xs transition ${job.payment==='paid' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-brand-600 hover:bg-brand-700'} ${savingPayment ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                {savingPayment ? 'Saving…' : (job.payment==='paid' ? 'Mark Unpaid' : 'Mark Paid')}
+              </button>
+            </div>
           </div>
 
           {/* Error inline (actions) */}
           {error && (
-            <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200" aria-live="polite">
+            <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">
               {error}
             </div>
           )}
@@ -228,34 +159,26 @@ export default function JobDetail(){
           )}
 
           {/* Photos */}
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-3 gap-2">
             {photos.length>0 ? (
               photos.map((p:string, i:number)=> (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={p+i}
-                  alt={`photo-${i+1}`}
-                  src={imgSrc(p)}
-                  onClick={()=>openLightbox(i)}
-                  className="h-28 w-full cursor-zoom-in rounded-md border border-slate-800 object-cover transition hover:opacity-90"
-                  onError={(e)=>{ (e.currentTarget as HTMLImageElement).style.visibility='hidden'; }}
-                />
+                <img key={p+i} alt={`photo-${i+1}`} src={imgSrc(p)} onClick={()=>openLightbox(i)} className="h-28 w-full cursor-zoom-in rounded-md border border-slate-800 object-cover"/>
               ))
             ) : (
-              <div className="col-span-2 grid place-items-center rounded-md border border-white/10 bg-white/5 py-10 text-sm text-slate-400 sm:col-span-3">No photos</div>
+              <div className="col-span-3 grid place-items-center rounded-md border border-white/10 bg-white/5 py-10 text-sm text-slate-400">No photos</div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Chat (responsive height) */}
-      <div className="h-[60vh] min-h-[420px] xl:h-[560px]">
+      <div className="h-[560px]">
         <Chat room={`client:${jobId}`}/>
       </div>
 
       {/* Lightbox */}
       {lightbox.open && photos.length>0 && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4" onClick={closeLightbox} role="dialog" aria-modal="true" aria-label="Photo viewer">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4" onClick={closeLightbox}>
           <div className="relative max-h-[90vh] w-full max-w-5xl" onClick={(e)=>e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imgSrc(photos[lightbox.index])} alt={`photo-${lightbox.index+1}`} className="mx-auto max-h-[80vh] w-auto rounded-lg object-contain" />

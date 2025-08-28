@@ -1,18 +1,5 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
   "/(staff)/jobs/[id]/page": "app/(staff)/jobs/[id]/page.js",
-  "/(client)/client/page": "app/(client)/client/page.js",
-  "/(client)/client/jobs/new/page": "app/(client)/client/jobs/new/page.js",
-  "/(client)/client/jobs/[id]/page": "app/(client)/client/jobs/[id]/page.js",
-  "/(public)/forgot/page": "app/(public)/forgot/page.js",
-  "/(public)/reset/page": "app/(public)/reset/page.js",
-  "/(public)/login/page": "app/(public)/login/page.js",
   "/(public)/page": "app/(public)/page.js",
-  "/(public)/signup/page": "app/(public)/signup/page.js",
-  "/(public)/verify/page": "app/(public)/verify/page.js",
-  "/(staff)/chat/page": "app/(staff)/chat/page.js",
-  "/(staff)/dashboard/page": "app/(staff)/dashboard/page.js",
-  "/(staff)/jobs/page": "app/(staff)/jobs/page.js",
-  "/(staff)/account/page": "app/(staff)/account/page.js",
-  "/(staff)/emails/page": "app/(staff)/emails/page.js"
+  "/(staff)/dashboard/page": "app/(staff)/dashboard/page.js"
 }
