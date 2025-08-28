@@ -25,7 +25,7 @@ export default function Signup(){
     setError(undefined);
     try{
       await signup(email.trim(),password);
-      router.push('/dashoard');
+      router.push('/client');
     }catch(err:any){
       setError(err?.message || 'Could not create account. Please try again.');
     }finally{
