@@ -20,6 +20,7 @@
     "timeago.js": "^4.0.2"
   },
   "devDependencies": {
+    "@types/node": "^24.3.0",
     "@types/react": "19.1.11",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.41",
