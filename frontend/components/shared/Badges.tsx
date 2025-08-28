@@ -19,7 +19,7 @@ function Dot({ className = "" }) {
 
 export function StatusBadge({ value, size = "md", className = "" }: { value: string; size?: Size; className?: string }) {
   const v = norm(value);
-  const map: Record<string, { bg: string; text: string; dot: string; icon?: JSX.Element }> = {
+  const map: Record<string, { bg: string; text: string; dot: string; icon?: any }> = {
     pending: {
       bg: "bg-amber-500/15",
       text: "text-amber-300",
@@ -80,7 +80,7 @@ export function StatusBadge({ value, size = "md", className = "" }: { value: str
 
 export function PaymentBadge({ value, size = "md", className = "" }: { value: string; size?: Size; className?: string }) {
   const v = norm(value);
-  const map: Record<string, { bg: string; text: string; dot: string; icon?: JSX.Element }> = {
+  const map: Record<string, { bg: string; text: string; dot: string; icon?: any }> = {
     unpaid: {
       bg: "bg-rose-500/15",
       text: "text-rose-300",
