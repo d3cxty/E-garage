@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+body { background:#0b1220; color:white; }
+
+.btn { @apply px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 transition; }
+.card { @apply rounded-2xl bg-slate-900/70 border border-slate-800 p-5 shadow-soft; }
+.input { @apply px-3 py-2 rounded-md bg-slate-800 outline-none w-full; }
+.select { @apply px-3 py-2 rounded-md bg-slate-800 outline-none; }
