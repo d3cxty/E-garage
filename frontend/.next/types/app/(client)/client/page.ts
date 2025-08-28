@@ -1,8 +1,8 @@
-// File: /home/hirwa/Desktop/PROJECTS/E-garage/frontend/app/(client)/client/jobs/page.tsx
-import * as entry from '../../../../../../app/(client)/client/jobs/page.js'
+// File: /home/hirwa/Desktop/PROJECTS/E-garage/frontend/app/(client)/client/page.tsx
+import * as entry from '../../../../../app/(client)/client/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../../../app/(client)/client/jobs/page.js')
+type TEntry = typeof import('../../../../../app/(client)/client/page.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{

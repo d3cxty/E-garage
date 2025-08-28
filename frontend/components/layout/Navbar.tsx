@@ -38,7 +38,7 @@ export default function Navbar() {
 
           {user && isClient && (
             <>
-              <Link href="/client/jobs" className="navlink">My Jobs</Link>
+              <Link href="/client/" className="navlink">My Jobs</Link>
               <Link href="/client/jobs/new" className="navlink">Fix My Car</Link>
               <UserMini avatar={avatar} />
               <button onClick={logout} className="navlink text-rose-300 hover:text-rose-400">Logout</button>
@@ -78,7 +78,7 @@ export default function Navbar() {
             )}
             {user && isClient && (
               <>
-                <Link href="/client/jobs" className="item">My Jobs</Link>
+                <Link href="/client/" className="item">My Jobs</Link>
                 <Link href="/client/jobs/new" className="item">Fix My Car</Link>
                 <button onClick={logout} className="item text-left text-rose-300">Logout</button>
               </>

@@ -1,5 +1,8 @@
 {
-  "/(public)/page": "app/(public)/page.js",
-  "/(client)/client/jobs/page": "app/(client)/client/jobs/page.js",
+  "/(client)/client/page": "app/(client)/client/page.js",
+  "/(public)/signup/page": "app/(public)/signup/page.js",
+  "/(public)/login/page": "app/(public)/login/page.js",
+  "/(staff)/dashboard/page": "app/(staff)/dashboard/page.js",
+  "/(staff)/jobs/page": "app/(staff)/jobs/page.js",
   "/(client)/client/jobs/new/page": "app/(client)/client/jobs/new/page.js"
 }

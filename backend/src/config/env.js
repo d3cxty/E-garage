@@ -22,6 +22,7 @@ const env = {
   // Gmail
   GMAIL_USER: process.env.GMAIL_USER || '',
   GMAIL_APP_PASS: nospace(process.env.GMAIL_APP_PASS), // strip spaces
+  ADMIN_SIGNUP_KEY: process.env.ADMIN_SIGNUP_KEY || 'some-long-random-secret',
 
   FROM_EMAIL: process.env.FROM_EMAIL || 'service@company.com',
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
