@@ -134,7 +134,7 @@ export default function UsersPage() {
                 <td className="text-slate-400">{u.createdAt ? new Date(u.createdAt).toLocaleString() : "-"}</td>
                 <td className="text-right">
                   <div className="inline-flex items-center gap-2">
-                    {u.role === "admin" && <Shield size={16} className="text-slate-400" title="Admin"/>}
+                    {u.role === "admin" && <Shield size={16} className="text-slate-400" />}
                     <button
                       className="px-2 py-1 rounded-md hover:bg-slate-800 disabled:opacity-50"
                       onClick={() => setDelId(u._id)}
