@@ -1,0 +1,14 @@
+import StaffMomoRequest from "@/components/payments/StaffMomoRequest";
+
+export default function PaymentsPage(){
+  return (
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">Payments</h1>
+        <p className="text-slate-400 text-sm">Create and track MTN MoMo requests.</p>
+      </div>
+      <StaffMomoRequest />
+      {/* (Optional) Add a table listing recent payments by calling a backend /payments list endpoint */}
+    </div>
+  );
+}

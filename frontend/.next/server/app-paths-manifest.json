@@ -1,5 +1,9 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
+  "/(staff)/dashboard/page": "app/(staff)/dashboard/page.js",
+  "/(staff)/users/page": "app/(staff)/users/page.js",
+  "/(client)/client/page": "app/(client)/client/page.js",
+  "/(client)/client/jobs/new/page": "app/(client)/client/jobs/new/page.js",
   "/(public)/page": "app/(public)/page.js",
-  "/(public)/signup/page": "app/(public)/signup/page.js"
+  "/(staff)/jobs/page": "app/(staff)/jobs/page.js",
+  "/(staff)/jobs/[id]/page": "app/(staff)/jobs/[id]/page.js"
 }

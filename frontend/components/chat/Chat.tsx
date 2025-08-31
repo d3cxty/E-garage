@@ -1,270 +1,223 @@
 "use client";
-import { useEffect, useRef, useState } from 'react';
-import { socket } from '@/lib/socket';
-import api from '@/lib/api';
-import { format } from 'timeago.js';
-import clsx from 'clsx';
+import { useEffect, useRef, useState } from "react";
+import clsx from "clsx";
+import { format } from "timeago.js";
+import api from "@/lib/api";
+import { socket } from "@/lib/socket";
 
 type Msg = {
   _id?: string;
   room: string;
   sender: string;
-  text: string;
-  at?: string;
+  type: "text" | "image";
+  text?: string;
+  images?: string[];
   createdAt?: string;
-  pending?: boolean;
-  error?: string;
+  at?: string;
+  _optimisticId?: string; // local-only marker
 };
 
 export default function Chat({ room }: { room: string }) {
   const [messages, setMessages] = useState<Msg[]>([]);
-  const [text, setText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | undefined>();
-  const [connected, setConnected] = useState<boolean>(socket.connected);
-  const [typing, setTyping] = useState<string | null>(null);
-
+  const [text, setText] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const atBottomRef = useRef(true);
-  const clearTypingTimer = useRef<any>(null);
-  const lastTypingEmit = useRef<number>(0);
-
-  // Track messages we've already inserted (prevents dupes)
-  const seenRef = useRef<Set<string>>(new Set());
-  const sig = (m: Msg) => m._id || `${m.sender}|${m.text}|${m.at || m.createdAt || ''}`;
 
   const me =
-    typeof window !== 'undefined' && localStorage.getItem('user')
-      ? JSON.parse(localStorage.getItem('user')!)
+    typeof window !== "undefined" && localStorage.getItem("user")
+      ? JSON.parse(localStorage.getItem("user")!)
       : null;
-  const myName = me?.email || 'guest';
+  const myName = me?.email || "guest";
 
-  const scrollToBottom = () => {
-    if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
-  };
-  const isNearBottom = () => {
-    const el = boxRef.current;
-    if (!el) return true;
-    return el.scrollTop + el.clientHeight >= el.scrollHeight - 48;
-  };
-
+  // connect socket & join room AFTER connect event
   useEffect(() => {
     let mounted = true;
-    if (!socket.connected) socket.connect();
-    socket.emit('chat:join', { room });
 
-    const onConnect = () => setConnected(true);
-    const onDisconnect = () => setConnected(false);
+    socket.connect();
 
-    const onTyping = (payload: any) => {
-      if (!mounted) return;
-      if (payload?.room === room && payload?.sender !== myName) {
-        setTyping(payload.sender || 'someone');
-        if (clearTypingTimer.current) clearTimeout(clearTypingTimer.current);
-        clearTypingTimer.current = setTimeout(() => setTyping(null), 1500);
-      }
+    const join = () => {
+      socket.emit("chat:join", { room });
+      console.log("joined room", room);
     };
+    socket.on("connect", join);
 
-    const onMsg = (msg: Msg) => {
-      if (msg.room !== room) return;
-
-      setMessages(prev => {
-        // 1) Replace optimistic (pending) message from the same sender+text
-        const pendIdx = prev.findIndex(
-          p => p.pending && p.sender === msg.sender && p.text === msg.text
-        );
-        if (pendIdx !== -1) {
-          const copy = [...prev];
-          copy[pendIdx] = msg;
-          seenRef.current.add(sig(msg));
-          return copy;
-        }
-
-        // 2) If we already have this id/signature, ignore
-        const key = sig(msg);
-        if (seenRef.current.has(key)) return prev;
-
-        // 3) Insert new
-        seenRef.current.add(key);
-        return [msg, ...prev];
-      });
-    };
-
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-    socket.on('chat:typing', onTyping);
-    socket.on('chat:message', onMsg);
-
-    // initial fetch
     api
       .get(`/chat/${encodeURIComponent(room)}/messages?limit=50`)
-      .then(r => {
+      .then((r) => {
         if (!mounted) return;
-        const arr: Msg[] = Array.isArray(r.data?.messages) ? r.data.messages : [];
-        setMessages(arr);
-        // seed seen set to avoid re-adding the same past messages
-        const s = new Set<string>();
-        for (const m of arr) s.add(sig(m));
-        seenRef.current = s;
-      })
-      .catch(e => {
-        if (!mounted) return;
-        setError(e?.response?.data?.message || 'Failed to load messages');
-      })
-      .finally(() => {
-        if (mounted) {
-          setLoading(false);
-          setTimeout(scrollToBottom, 0);
-        }
+        setMessages(r.data?.messages || []);
       });
+
+    const onMsg = (m: Msg) => {
+      if (m.room === room) {
+        setMessages((prev) => [m, ...prev.filter(p => p._optimisticId !== m._id)]);
+      }
+    };
+    const onTyping = (p: { room: string; typing: boolean }) => {
+      if (p.room === room) setTyping(p.typing);
+    };
+
+    socket.on("chat:message", onMsg);
+    socket.on("chat:typing", onTyping);
 
     return () => {
       mounted = false;
-      socket.emit('chat:leave', { room });
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.off('chat:typing', onTyping);
-      socket.off('chat:message', onMsg);
-      if (clearTypingTimer.current) clearTimeout(clearTypingTimer.current);
+      socket.off("connect", join);
+      socket.off("chat:message", onMsg);
+      socket.off("chat:typing", onTyping);
+      socket.disconnect();
     };
-  }, [room, myName]);
+  }, [room]);
 
   useEffect(() => {
-    const el = boxRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      atBottomRef.current = isNearBottom();
-    };
-    el.addEventListener('scroll', onScroll);
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
+    if (boxRef.current) {
+      // scroll container to bottom
+      boxRef.current.scrollTop = boxRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-  useEffect(() => {
-    if (!loading && atBottomRef.current) scrollToBottom();
-  }, [messages, loading]);
-
-  function send() {
-    const body = text.trim();
-    if (!body || !connected) return;
-
-    const tempId = 'tmp-' + Date.now();
-    const when = new Date().toISOString();
-    const optimistic: Msg = {
-      _id: tempId,
-      room,
-      sender: myName,
-      text: body,
-      at: when,
-      pending: true,
-    };
-
-    // show optimistic bubble
-    setMessages(prev => [optimistic, ...prev]);
-    setText('');
-    inputRef.current?.focus();
-
-    // Let the SERVER echo be the source of truth.
-    // Only use ack to flip error on the optimistic one if it failed.
-    socket.emit('chat:message', { room, sender: myName, text: body }, (ack: any) => {
-      if (!ack?.ok) {
-        setMessages(prev =>
-          prev.map(m => (m._id === tempId ? { ...m, pending: false, error: 'Failed to send' } : m))
-        );
+  function sendText() {
+    if (!text.trim()) return;
+    socket.emit(
+      "chat:message",
+      { room, sender: myName, type: "text", text },
+      (ack: any) => {
+        if (!ack?.ok) console.error("sendText error:", ack?.error);
       }
-      // If ack is ok, do nothing here — onMsg will replace the optimistic bubble.
-    });
+    );
+    setText("");
   }
 
-  function onType(e: React.ChangeEvent<HTMLInputElement>) {
-    setText(e.target.value);
-    const now = Date.now();
-    if (connected && now - lastTypingEmit.current > 900) {
-      lastTypingEmit.current = now;
-      socket.emit('chat:typing', { room, sender: myName });
+  async function handleFilePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+
+    // optimistic: render a temporary bubble while uploading
+    const tempId = `optim-${Date.now()}`;
+    const localUrl = URL.createObjectURL(f);
+    setMessages((prev) => [
+      {
+        _optimisticId: tempId,
+        room,
+        sender: myName,
+        type: "image",
+        images: [localUrl],
+        at: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", f);
+      await api.post(`/chat/${encodeURIComponent(room)}/upload`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      // server will emit the final message; optimistic bubble will remain but
+      // we also filter it out when the real one arrives (see setMessages in onMsg)
+    } catch (err) {
+      console.error("upload error:", err);
+      // remove optimistic bubble on error
+      setMessages((prev) => prev.filter((m) => m._optimisticId !== tempId));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+      // revoke preview URL
+      URL.revokeObjectURL(localUrl);
     }
   }
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-slate-800 bg-slate-900/60">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2 text-sm">
-        <div className="flex items-center gap-2 text-slate-300">
-          <span className={clsx('h-2 w-2 rounded-full', connected ? 'bg-emerald-400' : 'bg-slate-500')} />
-          <span>Room: {room}</span>
-          {typing && <span className="ml-2 text-xs text-slate-400">{typing} is typing…</span>}
-        </div>
-        {error && (
-          <button
-            onClick={() => {
-              setLoading(true);
-              setError(undefined);
-            }}
-            className="text-xs text-amber-300 hover:underline"
-          >
-            Retry load
-          </button>
-        )}
+    <div className="h-full flex flex-col rounded-2xl border border-slate-800 bg-slate-900/60">
+      <div className="px-4 py-2 border-b border-slate-800 text-sm text-slate-300">
+        Room: {room}
       </div>
 
-      {/* Messages */}
-      <div ref={boxRef} className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
-        {loading && <div className="text-sm text-slate-500">Loading messages…</div>}
-        {!loading && error && (
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">{error}</div>
-        )}
-        {!loading &&
-          !error &&
-          messages
-            .slice()
-            .reverse()
-            .map(m => {
-              const mine = m.sender === myName;
-              const when = m.at || m.createdAt;
-              return (
-                <div
-                  key={m._id || m.sender + m.text + (when || '')}
-                  className={clsx('flex', mine ? 'justify-end' : 'justify-start')}
+      <div ref={boxRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+        {messages.slice().reverse().map((m) => {
+          const mine = m.sender === myName;
+          const when = m.createdAt || m.at;
+          const key = m._optimisticId || m._id || Math.random().toString(36);
+
+          if (m.type === "image") {
+            return (
+              <div key={key} className={clsx("flex", mine ? "justify-end" : "justify-start")}>
+                <a
+                  href={m.images?.[0]}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={clsx(
+                    "block max-w-[70%] overflow-hidden rounded-xl border",
+                    mine ? "border-brand-600/40" : "border-slate-800"
+                  )}
                 >
-                  <div
-                    className={clsx(
-                      'max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow',
-                      mine ? 'rounded-br-sm bg-brand-600 text-white' : 'rounded-bl-sm bg-slate-800 text-slate-100'
-                    )}
-                  >
-                    <div className="mb-0.5 text-[11px] opacity-80">{m.sender}</div>
-                    <div>{m.text}</div>
-                    <div className="mt-1 flex items-center gap-2 text-[10px] opacity-70">
-                      {when && <span>{format(when)}</span>}
-                      {m.pending && <span>Sending…</span>}
-                      {m.error && <span className="text-rose-300">{m.error}</span>}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={m.images?.[0]} alt="upload" className="w-full h-auto" />
+                  {when && (
+                    <div className="p-1 text-[10px] text-slate-400">
+                      {format(when)}
                     </div>
-                  </div>
-                </div>
-              );
-            })}
+                  )}
+                </a>
+              </div>
+            );
+          }
+
+          return (
+            <div key={key} className={clsx("flex", mine ? "justify-end" : "justify-start")}>
+              <div
+                className={clsx(
+                  "max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow",
+                  mine
+                    ? "bg-brand-600/90 text-white rounded-br-sm"
+                    : "bg-slate-800 text-slate-100 rounded-bl-sm"
+                )}
+              >
+                <div className="text-[11px] mb-0.5 opacity-80">{m.sender}</div>
+                <div>{m.text}</div>
+                {when && <div className="text-[10px] mt-1 opacity-70">{format(when)}</div>}
+              </div>
+            </div>
+          );
+        })}
+        {typing && <div className="text-xs text-slate-400 italic">typing…</div>}
       </div>
 
-      {/* Composer */}
-      <div className="flex gap-2 border-t border-slate-800 p-3">
+      <div className="p-3 border-t border-slate-800 flex gap-2 items-center">
         <input
-          ref={inputRef}
           value={text}
-          onChange={onType}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              send();
-            }
+          onChange={(e) => {
+            setText(e.target.value);
+            socket.emit("chat:typing", { room, typing: true });
+            setTimeout(() => socket.emit("chat:typing", { room, typing: false }), 900);
           }}
-          placeholder={connected ? 'Type a message…' : 'Connecting…'}
-          className="flex-1 rounded-xl bg-slate-800 px-3 py-2 outline-none disabled:opacity-60"
-          disabled={!connected}
+          onKeyDown={(e) => e.key === "Enter" && sendText()}
+          placeholder="Type a message…"
+          className="flex-1 px-3 py-2 rounded-xl bg-slate-800 outline-none"
+        />
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFilePick}
         />
         <button
-          onClick={send}
-          className={clsx('rounded-xl px-4', connected ? 'bg-brand-600 hover:bg-brand-700' : 'bg-slate-700/60 cursor-not-allowed')}
-          disabled={!connected}
+          onClick={() => fileRef.current?.click()}
+          className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50"
+          disabled={uploading}
+          title="Attach image"
+        >
+          {uploading ? "Uploading…" : "Attach"}
+        </button>
+
+        <button
+          onClick={sendText}
+          className="px-4 rounded-xl bg-brand-600 hover:bg-brand-700"
         >
           Send
         </button>

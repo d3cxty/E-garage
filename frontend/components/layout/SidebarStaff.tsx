@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { Car, LayoutDashboard, MessagesSquare, Mail, Settings, LogOut } from 'lucide-react';
+import { Car, LayoutDashboard, MessagesSquare,Wallet , Mail, Settings, LogOut ,Users, Wallet2Icon} from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import clsx from 'clsx';
@@ -42,9 +42,13 @@ function NavList({ onLogout }:{ onLogout: ()=>void }){
       <nav className="grid gap-1 text-sm">
         <Item href="/dashboard" icon={LayoutDashboard} label="Dashboard"/>
         <Item href="/jobs" icon={Car} label="Jobs"/>
+        <Item href="/users" icon={Users} label="Users"/>
+        {/* //<Item href="/payments" icon={Wallet} label="Payments"/>  */}
+
         <Item href="/emails" icon={Mail} label="Emails"/>
         <Item href="/chat" icon={MessagesSquare} label="Global Chat"/>
         <Item href="/account" icon={Settings} label="Account"/>
+        
       </nav>
 
       <div className="flex-1" />
