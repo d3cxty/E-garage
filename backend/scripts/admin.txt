@@ -1,0 +1,6 @@
+API="https://e-garage-1.onrender.com"   # or http://localhost:5000
+
+curl -X POST "$API/auth/register" \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: super-secret-key-here" \
+  -d '{"email":"staff1@example.com","password":"StaffPass123","role":"staff"}'

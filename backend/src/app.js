@@ -8,7 +8,7 @@ import { notFound, errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
 
-app.use(cors({ origin: env.CORS_ORIGIN }));
+app.use(cors({ origin: env.CORS_ORIGIN } || '*'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));

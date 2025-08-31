@@ -4,9 +4,11 @@ const messageSchema = new mongoose.Schema(
   {
     room: { type: String, default: 'global', index: true },
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
-    sender: { type: String, required: true },
-    text: { type: String, required: true },
-    meta: { type: Object, default: {} }
+    sender: { type: String, required: true }, // email/name
+    type: { type: String, enum: ['text', 'image'], default: 'text' },
+    text: { type: String, default: '' },      // only for type=text
+    images: [String],                         // only for type=image (URLs)
+    meta: { type: Object, default: {} },
   },
   { timestamps: true }
 );

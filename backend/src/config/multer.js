@@ -14,6 +14,7 @@ function localUploader() {
     photos: path.join(uploads, 'photos'),
     proformas: path.join(uploads, 'proformas'),
     logos: path.join(uploads, 'logos'),
+    chat: path.join(uploads, 'chat'), // ⬅️ add a dedicated chat folder
   };
   Object.values(folders).forEach((d) => {
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
@@ -24,6 +25,7 @@ function localUploader() {
       const isImage = file.mimetype.startsWith('image/');
       if (req.baseUrl.includes('/account')) return cb(null, folders.logos);
       if (req.baseUrl.includes('/clients') && !isImage) return cb(null, folders.proformas);
+      if (req.baseUrl.includes('/chat') && isImage) return cb(null, folders.chat); // ⬅️ chat images
       cb(null, folders.photos);
     },
     filename: (_req, file, cb) => {
@@ -46,21 +48,16 @@ function cloudinaryUploader() {
   const storage = new CloudinaryStorage({
     cloudinary,
     params: (req, file) => {
-      // pick folder by route + file type (same logic as local)
       const isImage = file.mimetype.startsWith('image/');
       let folder = 'photos';
       if (req.baseUrl.includes('/account')) folder = 'logos';
       else if (req.baseUrl.includes('/clients') && !isImage) folder = 'proformas';
-
-      // Optional: restrict formats
-      const allowedFormats = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+      else if (req.baseUrl.includes('/chat') && isImage) folder = 'chat'; // ⬅️ chat images
 
       return {
         folder,
-        resource_type: 'auto', // handles images & pdfs
-        allowed_formats: allowedFormats,
-        // public_id defaults to random; you can customize:
-        // public_id: `${Date.now()}_${Math.random().toString(36).slice(2)}`
+        resource_type: 'auto',            // images & pdfs
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
         use_filename: true,
         unique_filename: true,
         overwrite: false,
